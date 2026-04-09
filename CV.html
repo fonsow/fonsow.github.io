@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My XP Site</title>
+<link rel="stylesheet" href="https://unpkg.com/xp.css">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Tahoma', sans-serif;
+    background: #008080 url('') no-repeat center center fixed;
+    background-color: #245EDC;
+    background-image: 
+      radial-gradient(ellipse 80% 60% at 50% 120%, #3a9e3a 0%, #2d7a2d 40%, transparent 70%),
+      linear-gradient(180deg, #4a9fd5 0%, #87CEEB 45%, #c8e6c9 46%, #4CAF50 100%);
+    min-height: 100vh;
+    overflow: hidden;
+    position: relative;
+    user-select: none;
+  }
+
+  /* ===== WIGGLY KEYFRAMES ===== */
+  @keyframes wiggleOpen {
+    0%   { transform: scale(0.5) rotate(-8deg); opacity: 0; }
+    20%  { transform: scale(1.08) rotate(5deg);  opacity: 1; }
+    40%  { transform: scale(0.96) rotate(-4deg); }
+    60%  { transform: scale(1.03) rotate(2deg); }
+    80%  { transform: scale(0.99) rotate(-1deg); }
+    100% { transform: scale(1)    rotate(0deg); }
+  }
+
+  @keyframes wiggleClose {
+    0%   { transform: scale(1) rotate(0deg); opacity: 1; }
+    30%  { transform: scale(1.04) rotate(4deg); }
+    60%  { transform: scale(0.6) rotate(-8deg); opacity: 0.5; }
+    100% { transform: scale(0) rotate(12deg); opacity: 0; }
+  }
+
+  @keyframes jiggle {
+    0%,100% { transform: rotate(0deg); }
+    20%  { transform: rotate(-3deg) translateX(-2px); }
+    40%  { transform: rotate(3deg)  translateX(2px); }
+    60%  { transform: rotate(-2deg) translateX(-1px); }
+    80%  { transform: rotate(2deg)  translateX(1px); }
+  }
+
+  @keyframes iconBounce {
+    0%,100% { transform: translateY(0) scale(1); }
+    40%     { transform: translateY(-10px) scale(1.1); }
+    60%     { transform: translateY(-5px) scale(1.05); }
+  }
+
+  @keyframes taskbarPop {
+    0%   { transform: translateY(100%); }
+    60%  { transform: translateY(-6px); }
+    80%  { transform: translateY(2px); }
+    100% { transform: translateY(0); }
+  }
+
+  @keyframes startGlow {
+    0%,100% { box-shadow: none; }
+    50%     { box-shadow: 0 0 8px 3px rgba(100,200,100,0.7); }
+  }
+
+  /* ===== DESKTOP ICONS ===== */
+  .desktop { position: absolute; top: 0; left: 0; right: 0; bottom: 40px; padding: 16px; }
+
+  .icon {
+    display: flex; flex-direction: column; align-items: center;
+    width: 72px; cursor: pointer; padding: 4px; border-radius: 4px;
+    color: white; font-size: 11px; text-align: center; margin: 4px;
+    position: absolute; transition: background 0.1s;
+  }
+  .icon:hover { background: rgba(255,255,255,0.25); }
+  .icon.selected { background: rgba(49,106,197,0.6); outline: 1px dotted white; }
+  .icon img, .icon .icon-img {
+    width: 32px; height: 32px; margin-bottom: 4px; image-rendering: pixelated;
+  }
+  .icon .icon-img { font-size: 28px; line-height: 32px; }
+  .icon span { text-shadow: 1px 1px 2px black; line-height: 1.2; }
+  .icon:active .icon-img { animation: iconBounce 0.4s ease; }
+
+  /* ===== WINDOWS ===== */
+  .xp-window {
+    position: absolute;
+    min-width: 280px; min-height: 180px;
+    animation: wiggleOpen 0.5s cubic-bezier(0.34,1.56,0.64,1) both;
+    box-shadow: 3px 3px 10px rgba(0,0,0,0.5);
+    z-index: 100;
+    display: none;
+  }
+  .xp-window.visible { display: block; }
+  .xp-window.closing { animation: wiggleClose 0.35s ease-in both; }
+  .xp-window.jiggling { animation: jiggle 0.4s ease; }
+  .xp-window.active { z-index: 200; }
+
+  .xp-window .title-bar { cursor: move; }
+  .xp-window .title-bar-text { font-size: 11px; }
+
+  /* Window content styles */
+  .window-body { padding: 8px; overflow: auto; }
+  .window-body p { font-size: 12px; margin-bottom: 8px; line-height: 1.5; }
+  .window-body img { max-width: 100%; }
+
+  /* ===== TASKBAR ===== */
+  #taskbar {
+    position: fixed; bottom: 0; left: 0; right: 0; height: 40px;
+    background: linear-gradient(180deg, #1f6dc7 0%, #3a9ade 8%, #245aab 50%, #1a4e99 51%, #2563b5 100%);
+    border-top: 1px solid #5590d6;
+    display: flex; align-items: center; gap: 4px; padding: 2px 4px;
+    animation: taskbarPop 0.6s cubic-bezier(0.34,1.56,0.64,1) both;
+    z-index: 9999;
+  }
+
+  #start-btn {
+    height: 32px; padding: 0 10px;
+    background: linear-gradient(180deg, #5cb85c 0%, #3d9c3d 40%, #2d7a2d 100%);
+    border: 1px solid #1a5c1a;
+    border-radius: 3px 10px 10px 3px;
+    color: white; font-weight: bold; font-size: 13px;
+    cursor: pointer; display: flex; align-items: center; gap: 5px;
+    font-family: 'Tahoma', sans-serif;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.3);
+    animation: startGlow 2s infinite;
+  }
+  #start-btn:hover { filter: brightness(1.15); }
+  #start-btn:active { filter: brightness(0.9); }
+  #start-btn .start-icon { font-size: 16px; }
+
+  .taskbar-btn {
+    height: 28px; padding: 0 8px; min-width: 100px;
+    background: linear-gradient(180deg, #5b96e0 0%, #3a7acc 50%, #245aab 100%);
+    border: 1px solid #1a3e7a;
+    border-radius: 2px; color: white; font-size: 11px;
+    cursor: pointer; text-align: left; white-space: nowrap; overflow: hidden;
+    font-family: 'Tahoma', sans-serif;
+    transition: filter 0.1s;
+  }
+  .taskbar-btn:hover { filter: brightness(1.2); }
+  .taskbar-btn.focused { background: linear-gradient(180deg, #3a7acc 0%, #245aab 100%); border-inset: 1px; }
+
+  #clock {
+    margin-left: auto; height: 32px; padding: 0 10px;
+    background: rgba(0,0,0,0.15); border: 1px solid rgba(0,0,0,0.2);
+    border-radius: 2px; color: white; font-size: 11px;
+    display: flex; align-items: center; cursor: default;
+    font-family: 'Tahoma', sans-serif;
+  }
+
+  /* ===== START MENU ===== */
+  #start-menu {
+    position: fixed; bottom: 40px; left: 0;
+    width: 300px;
+    background: white;
+    border: 1px solid #003087;
+    border-radius: 6px 6px 0 0;
+    overflow: hidden;
+    display: none; z-index: 9998;
+    animation: wiggleOpen 0.3s cubic-bezier(0.34,1.56,0.64,1) both;
+    transform-origin: bottom left;
+    box-shadow: 3px 3px 10px rgba(0,0,0,0.5);
+  }
+  #start-menu.open { display: block; }
+
+  .start-menu-header {
+    background: linear-gradient(90deg, #1f5ac7 0%, #5b9bd5 100%);
+    padding: 8px 12px; color: white;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .start-menu-avatar {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: #87CEEB; border: 2px solid white;
+    display: flex; align-items: center; justify-content: center; font-size: 20px;
+  }
+  .start-menu-header span { font-weight: bold; font-size: 14px; }
+
+  .start-menu-items { padding: 4px 0; border-top: 2px solid #3a7acc; }
+  .start-menu-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 6px 12px; font-size: 12px; cursor: pointer;
+    transition: background 0.1s;
+  }
+  .start-menu-item:hover { background: #316ac5; color: white; animation: jiggle 0.3s ease; }
+  .start-menu-item .sm-icon { font-size: 20px; width: 24px; text-align: center; }
+
+  /* ===== ABOUT CONTENT ===== */
+  .about-content { padding: 8px; }
+  .about-content h2 { font-size: 13px; margin-bottom: 6px; }
+  .about-content p  { font-size: 11px; line-height: 1.5; margin-bottom: 6px; }
+
+  /* ===== NOTEPAD CONTENT ===== */
+  .notepad-area {
+    width: 100%; height: 200px; resize: none;
+    font-family: 'Courier New', monospace; font-size: 12px;
+    border: inset 2px; padding: 4px;
+    background: white; outline: none;
+  }
+
+  /* ===== MY COMPUTER CONTENT ===== */
+  .drives { display: flex; flex-wrap: wrap; gap: 8px; padding: 4px; }
+  .drive {
+    display: flex; flex-direction: column; align-items: center;
+    width: 80px; padding: 6px; border-radius: 2px; cursor: pointer;
+    font-size: 11px; text-align: center;
+  }
+  .drive:hover { background: rgba(49,106,197,0.2); animation: jiggle 0.3s ease; }
+  .drive .d-icon { font-size: 28px; margin-bottom: 4px; }
+
+  /* ===== PAINT CONTENT ===== */
+  #paint-canvas { cursor: crosshair; display: block; }
+  .paint-toolbar { display: flex; gap: 4px; padding: 4px; background: #c0c0c0; flex-wrap: wrap; align-items: center; }
+  .paint-color { width: 16px; height: 16px; border: 1px solid #000; cursor: pointer; display: inline-block; }
+  .paint-color.active { outline: 2px solid white; box-shadow: 0 0 0 3px black; }
+
+  /* resize handle */
+  .resize-handle {
+    position: absolute; right: 0; bottom: 0;
+    width: 16px; height: 16px; cursor: se-resize;
+    background: linear-gradient(135deg, transparent 50%, #999 50%, #999 60%, transparent 60%, transparent 70%, #999 70%, #999 80%, transparent 80%);
+  }
+
+  /* ===== FOLDER FILE ICONS ===== */
+  .folder-file {
+    width: 72px; padding: 6px 4px; border-radius: 2px;
+    cursor: pointer; text-align: center;
+  }
+  .folder-file:hover { background: rgba(49,106,197,0.15); }
+  .folder-file:active { animation: iconBounce 0.3s ease; }
+  .folder-file.selected { background: rgba(49,106,197,0.3); outline: 1px dotted #316ac5; }
+</style>
+</head>
+<body>
+
+<!-- DESKTOP -->
+<div class="desktop" id="desktop">
+
+  <div class="icon" style="left:16px;top:16px" ondblclick="openWindow('mycomputer')" onclick="selectIcon(this)">
+    <div class="icon-img">🖥️</div>
+    <span>My Computer</span>
+  </div>
+
+  <div class="icon" style="left:16px;top:100px" ondblclick="openWindow('notepad')" onclick="selectIcon(this)">
+    <div class="icon-img">📝</div>
+    <span>Notepad</span>
+  </div>
+
+  <div class="icon" style="left:16px;top:184px" ondblclick="openWindow('paint')" onclick="selectIcon(this)">
+    <div class="icon-img">🎨</div>
+    <span>MS Paint</span>
+  </div>
+
+  <div class="icon" style="left:16px;top:268px" ondblclick="openWindow('about')" onclick="selectIcon(this)">
+    <div class="icon-img">ℹ️</div>
+    <span>About This Site</span>
+  </div>
+
+  <div class="icon" style="left:16px;top:352px" ondblclick="openWindow('aboutme')" onclick="selectIcon(this)">
+    <div class="icon-img">📁</div>
+    <span>About Me</span>
+  </div>
+
+</div>
+
+<!-- START MENU -->
+<div id="start-menu">
+  <div class="start-menu-header">
+    <div class="start-menu-avatar">😊</div>
+    <span>XP User</span>
+  </div>
+  <div class="start-menu-items">
+    <div class="start-menu-item" onclick="openWindow('notepad');closeStart()"><span class="sm-icon">📝</span> Notepad</div>
+    <div class="start-menu-item" onclick="openWindow('paint');closeStart()"><span class="sm-icon">🎨</span> MS Paint</div>
+    <div class="start-menu-item" onclick="openWindow('mycomputer');closeStart()"><span class="sm-icon">🖥️</span> My Computer</div>
+    <div class="start-menu-item" onclick="openWindow('aboutme');closeStart()"><span class="sm-icon">📁</span> About Me</div>
+    <div class="start-menu-item" onclick="openWindow('about');closeStart()"><span class="sm-icon">ℹ️</span> About This Site</div>
+    <hr style="margin:4px 0">
+    <div class="start-menu-item" onclick="closeStart()"><span class="sm-icon">🔴</span> Turn Off Computer</div>
+  </div>
+</div>
+
+<!-- TASKBAR -->
+<div id="taskbar">
+  <button id="start-btn" onclick="toggleStart()">
+    <span class="start-icon">🪟</span> start
+  </button>
+  <div id="taskbar-buttons" style="display:flex;gap:4px;flex:1;overflow:hidden"></div>
+  <div id="clock">12:00 PM</div>
+</div>
+
+<!-- ====== WINDOWS ====== -->
+
+<!-- My Computer -->
+<div class="window xp-window" id="win-mycomputer" style="width:360px;height:260px;top:80px;left:120px">
+  <div class="title-bar">
+    <div class="title-bar-text">🖥️ My Computer</div>
+    <div class="title-bar-controls">
+      <button aria-label="Minimize" onclick="minimizeWindow('mycomputer')"></button>
+      <button aria-label="Maximize"></button>
+      <button aria-label="Close" onclick="closeWindow('mycomputer')"></button>
+    </div>
+  </div>
+  <div class="window-body">
+    <p style="font-size:11px;color:#666;margin-bottom:6px">Select an item to view its description.</p>
+    <div class="drives">
+      <div class="drive"><div class="d-icon">💾</div><span>Floppy (A:)</span></div>
+      <div class="drive"><div class="d-icon">💿</div><span>Local Disk (C:)</span></div>
+      <div class="drive"><div class="d-icon">📀</div><span>CD Drive (D:)</span></div>
+      <div class="drive"><div class="d-icon">🖨️</div><span>Printers</span></div>
+      <div class="drive"><div class="d-icon">🌐</div><span>My Network</span></div>
+    </div>
+  </div>
+  <div class="resize-handle"></div>
+</div>
+
+<!-- Notepad -->
+<div class="window xp-window" id="win-notepad" style="width:400px;height:300px;top:100px;left:160px">
+  <div class="title-bar">
+    <div class="title-bar-text">📝 Untitled - Notepad</div>
+    <div class="title-bar-controls">
+      <button aria-label="Minimize" onclick="minimizeWindow('notepad')"></button>
+      <button aria-label="Maximize"></button>
+      <button aria-label="Close" onclick="closeWindow('notepad')"></button>
+    </div>
+  </div>
+  <div class="window-body" style="padding:0;display:flex;flex-direction:column;height:calc(100% - 28px)">
+    <div style="background:#f0f0f0;padding:2px 4px;font-size:11px;border-bottom:1px solid #ccc;display:flex;gap:8px">
+      <span style="cursor:pointer" onclick="wiggleWin('notepad')">File</span>
+      <span style="cursor:pointer">Edit</span>
+      <span style="cursor:pointer">Format</span>
+      <span style="cursor:pointer">Help</span>
+    </div>
+    <textarea class="notepad-area" style="flex:1" placeholder="Start typing here... wiggle the window by clicking File!">Welcome to my XP website! ✨
+
+This is a working Notepad. Type whatever you want!
+
+• Double-click desktop icons to open windows
+• Drag windows by the title bar
+• Click X to close, _ to minimize
+• Try MS Paint to draw something!
+
+Have fun! 🎉</textarea>
+  </div>
+  <div class="resize-handle"></div>
+</div>
+
+<!-- MS Paint -->
+<div class="window xp-window" id="win-paint" style="width:460px;height:340px;top:90px;left:180px">
+  <div class="title-bar">
+    <div class="title-bar-text">🎨 Untitled - Paint</div>
+    <div class="title-bar-controls">
+      <button aria-label="Minimize" onclick="minimizeWindow('paint')"></button>
+      <button aria-label="Maximize"></button>
+      <button aria-label="Close" onclick="closeWindow('paint')"></button>
+    </div>
+  </div>
+  <div class="window-body" style="padding:0;height:calc(100% - 28px);display:flex;flex-direction:column">
+    <div class="paint-toolbar" id="paint-toolbar">
+      <span style="font-size:11px">Color:</span>
+      <span class="paint-color active" data-color="#000000" style="background:#000000" onclick="setPaintColor(this)"></span>
+      <span class="paint-color" data-color="#ff0000" style="background:#ff0000" onclick="setPaintColor(this)"></span>
+      <span class="paint-color" data-color="#0000ff" style="background:#0000ff" onclick="setPaintColor(this)"></span>
+      <span class="paint-color" data-color="#00aa00" style="background:#00aa00" onclick="setPaintColor(this)"></span>
+      <span class="paint-color" data-color="#ffff00" style="background:#ffff00" onclick="setPaintColor(this)"></span>
+      <span class="paint-color" data-color="#ff6600" style="background:#ff6600" onclick="setPaintColor(this)"></span>
+      <span class="paint-color" data-color="#ffffff" style="background:#ffffff;border:1px solid #000" onclick="setPaintColor(this)"></span>
+      <span style="margin-left:8px;font-size:11px">Size:</span>
+      <input type="range" min="1" max="20" value="4" id="brush-size" style="width:60px">
+      <button onclick="clearCanvas()" style="font-size:11px;padding:2px 6px">Clear</button>
+    </div>
+    <canvas id="paint-canvas" width="440" height="240" style="background:white;flex:1;width:100%"></canvas>
+  </div>
+  <div class="resize-handle"></div>
+</div>
+
+<!-- About -->
+<div class="window xp-window" id="win-about" style="width:340px;height:220px;top:110px;left:200px">
+  <div class="title-bar">
+    <div class="title-bar-text">ℹ️ About This Site</div>
+    <div class="title-bar-controls">
+      <button aria-label="Minimize" onclick="minimizeWindow('about')"></button>
+      <button aria-label="Maximize"></button>
+      <button aria-label="Close" onclick="closeWindow('about')"></button>
+    </div>
+  </div>
+  <div class="window-body about-content">
+    <h2>🪟 My Windows XP Website</h2>
+    <p>Welcome to my retro XP-style website! Everything is wiggly and nostalgic.</p>
+    <p><b>Features:</b><br>
+    • Draggable, wiggling windows<br>
+    • Working MS Paint<br>
+    • Working Notepad<br>
+    • Taskbar & Start Menu<br>
+    • XP-authentic styling</p>
+    <p style="color:#888">Built with XP.css + vanilla JS</p>
+  </div>
+  <div class="resize-handle"></div>
+</div>
+
+<!-- About Me Folder -->
+<div class="window xp-window" id="win-aboutme" style="width:320px;height:220px;top:100px;left:140px">
+  <div class="title-bar">
+    <div class="title-bar-text">📁 About Me</div>
+    <div class="title-bar-controls">
+      <button aria-label="Minimize" onclick="minimizeWindow('aboutme')"></button>
+      <button aria-label="Maximize"></button>
+      <button aria-label="Close" onclick="closeWindow('aboutme')"></button>
+    </div>
+  </div>
+  <div class="window-body" style="background:#fff;height:calc(100% - 28px)">
+    <p style="font-size:10px;color:#666;margin-bottom:10px">2 object(s)</p>
+    <div style="display:flex;gap:16px;padding:4px">
+      <div class="folder-file" ondblclick="openWindow('studies')" title="Studies">
+        <div style="font-size:32px;text-align:center">📄</div>
+        <div style="font-size:11px;text-align:center;margin-top:2px">studies.txt</div>
+      </div>
+      <div class="folder-file" ondblclick="openWindow('workexp')" title="Work Experience">
+        <div style="font-size:32px;text-align:center">📄</div>
+        <div style="font-size:11px;text-align:center;margin-top:2px">work_experience.txt</div>
+      </div>
+    </div>
+  </div>
+  <div class="resize-handle"></div>
+</div>
+
+<!-- Studies -->
+<div class="window xp-window" id="win-studies" style="width:420px;height:310px;top:120px;left:180px">
+  <div class="title-bar">
+    <div class="title-bar-text">📄 studies.txt - Notepad</div>
+    <div class="title-bar-controls">
+      <button aria-label="Minimize" onclick="minimizeWindow('studies')"></button>
+      <button aria-label="Maximize"></button>
+      <button aria-label="Close" onclick="closeWindow('studies')"></button>
+    </div>
+  </div>
+  <div class="window-body" style="padding:0;height:calc(100% - 28px);display:flex;flex-direction:column">
+    <div style="background:#f0f0f0;padding:2px 4px;font-size:11px;border-bottom:1px solid #ccc;display:flex;gap:8px">
+      <span style="cursor:pointer">File</span><span style="cursor:pointer">Edit</span><span style="cursor:pointer">Format</span><span style="cursor:pointer">Help</span>
+    </div>
+    <pre class="notepad-area" style="flex:1;overflow:auto;cursor:default">===========================
+         STUDIES
+===========================
+
+🎓 MSc Information Security
+   FCUP — University of Porto
+   Relevant Courses:
+     · Applied Cryptography
+     · Theory & Practice of Security Attacks
+     · Network Security
+     · Systems & Data Security
+     · Security in Software Engineering
+     · Security in Trusted Hardware
+
+🎓 BSc Computer Science
+   FCUP — University of Porto
+   Relevant Courses:
+     · Algorithms & Data Structures
+     · Operating Systems
+     · Computer Networks
+     · Software Engineering
+     · Databases
+
+---------------------------
+    SKILLS FROM ACADEMIA
+---------------------------
+  · Cryptography & PKI
+  · Network Protocol Security
+  · Secure Software Development
+  · Systems Hardening & Access Control
+  · Security Attack Techniques
+  · Trusted Hardware Security
+</pre>
+  </div>
+  <div class="resize-handle"></div>
+</div>
+
+<!-- Work Experience -->
+<div class="window xp-window" id="win-workexp" style="width:440px;height:330px;top:140px;left:210px">
+  <div class="title-bar">
+    <div class="title-bar-text">📄 work_experience.txt - Notepad</div>
+    <div class="title-bar-controls">
+      <button aria-label="Minimize" onclick="minimizeWindow('workexp')"></button>
+      <button aria-label="Maximize"></button>
+      <button aria-label="Close" onclick="closeWindow('workexp')"></button>
+    </div>
+  </div>
+  <div class="window-body" style="padding:0;height:calc(100% - 28px);display:flex;flex-direction:column">
+    <div style="background:#f0f0f0;padding:2px 4px;font-size:11px;border-bottom:1px solid #ccc;display:flex;gap:8px">
+      <span style="cursor:pointer">File</span><span style="cursor:pointer">Edit</span><span style="cursor:pointer">Format</span><span style="cursor:pointer">Help</span>
+    </div>
+    <pre class="notepad-area" style="flex:1;overflow:auto;cursor:default">===========================
+      WORK & CERTIFICATIONS
+===========================
+
+💼 Security Analyst — CERT.PT
+   February 2025 – Present
+   · Cybersecurity incident response
+     at national level
+   · Digital forensics and post-incident
+     analysis
+   · Critical infrastructure protection
+
+💼 Penetration Tester — Devoteam
+   Cyber Trust
+   October 2023 – February 2025
+   · Web application penetration testing
+   · Security assessments and audits
+   · Vulnerability reporting and
+     remediation guidance
+
+🏅 GIAC Machine Learning Engineer
+   (GMLE) — SANS Institute
+
+🏅 Web App Penetration Tester eXtreme
+   (eWPTXv2) — INE Security
+
+---------------------------
+  SKILLS FROM WORK & CERTS
+---------------------------
+  · Web Application Penetration Testing
+  · Advanced Web Attack & Exploitation
+  · Incident Response & Digital Forensics
+  · Machine Learning for Security
+  · Vulnerability Assessment & Reporting
+</pre>
+  </div>
+  <div class="resize-handle"></div>
+</div>
+
+<script>
+// ===== WINDOW MANAGER =====
+const windows = {};
+let zTop = 200;
+
+function openWindow(id) {
+  const win = document.getElementById('win-' + id);
+  if (!win) return;
+  if (!windows[id]) windows[id] = { minimized: false };
+  win.classList.remove('closing');
+  win.classList.add('visible');
+  win.style.animation = 'none';
+  void win.offsetWidth;
+  win.style.animation = '';
+  focusWindow(id);
+  updateTaskbar();
+}
+
+function closeWindow(id) {
+  const win = document.getElementById('win-' + id);
+  if (!win) return;
+  win.classList.add('closing');
+  win.addEventListener('animationend', () => {
+    win.classList.remove('visible', 'closing');
+    if (windows[id]) windows[id].minimized = false;
+    updateTaskbar();
+  }, { once: true });
+}
+
+function minimizeWindow(id) {
+  const win = document.getElementById('win-' + id);
+  if (!win) return;
+  win.classList.add('closing');
+  win.addEventListener('animationend', () => {
+    win.classList.remove('visible', 'closing');
+    if (!windows[id]) windows[id] = {};
+    windows[id].minimized = true;
+    updateTaskbar();
+  }, { once: true });
+}
+
+function focusWindow(id) {
+  document.querySelectorAll('.xp-window').forEach(w => w.classList.remove('active'));
+  const win = document.getElementById('win-' + id);
+  if (win) { win.classList.add('active'); win.style.zIndex = ++zTop; }
+}
+
+function wiggleWin(id) {
+  const win = document.getElementById('win-' + id);
+  if (!win) return;
+  win.classList.remove('jiggling');
+  void win.offsetWidth;
+  win.classList.add('jiggling');
+  win.addEventListener('animationend', () => win.classList.remove('jiggling'), { once: true });
+}
+
+function updateTaskbar() {
+  const bar = document.getElementById('taskbar-buttons');
+  bar.innerHTML = '';
+  document.querySelectorAll('.xp-window').forEach(win => {
+    const id = win.id.replace('win-', '');
+    const title = win.querySelector('.title-bar-text').textContent;
+    const isVisible = win.classList.contains('visible');
+    const isMin = windows[id] && windows[id].minimized;
+    if (isVisible || isMin) {
+      const btn = document.createElement('button');
+      btn.className = 'taskbar-btn' + (isVisible ? ' focused' : '');
+      btn.textContent = title;
+      btn.style.maxWidth = '140px';
+      btn.onclick = () => {
+        if (isMin) { openWindow(id); }
+        else { focusWindow(id); }
+      };
+      bar.appendChild(btn);
+    }
+  });
+}
+
+// ===== DRAG =====
+document.querySelectorAll('.xp-window').forEach(win => {
+  const titleBar = win.querySelector('.title-bar');
+  let dragging = false, ox, oy;
+
+  titleBar.addEventListener('mousedown', e => {
+    if (e.target.tagName === 'BUTTON') return;
+    dragging = true;
+    ox = e.clientX - win.offsetLeft;
+    oy = e.clientY - win.offsetTop;
+    focusWindow(win.id.replace('win-', ''));
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    win.style.left = Math.max(0, e.clientX - ox) + 'px';
+    win.style.top  = Math.max(0, e.clientY - oy) + 'px';
+  });
+
+  document.addEventListener('mouseup', () => { dragging = false; });
+
+  win.addEventListener('mousedown', () => focusWindow(win.id.replace('win-', '')));
+});
+
+// ===== RESIZE =====
+document.querySelectorAll('.resize-handle').forEach(handle => {
+  const win = handle.closest('.xp-window');
+  let resizing = false, sx, sy, sw, sh;
+  handle.addEventListener('mousedown', e => {
+    resizing = true; sx = e.clientX; sy = e.clientY;
+    sw = win.offsetWidth; sh = win.offsetHeight; e.preventDefault();
+  });
+  document.addEventListener('mousemove', e => {
+    if (!resizing) return;
+    win.style.width  = Math.max(200, sw + e.clientX - sx) + 'px';
+    win.style.height = Math.max(150, sh + e.clientY - sy) + 'px';
+  });
+  document.addEventListener('mouseup', () => { resizing = false; });
+});
+
+// ===== PAINT =====
+const canvas = document.getElementById('paint-canvas');
+const ctx = canvas.getContext('2d');
+let painting = false, paintColor = '#000000', brushSize = 4;
+
+canvas.addEventListener('mousedown', e => { painting = true; draw(e); });
+canvas.addEventListener('mousemove', e => { if (painting) draw(e); });
+canvas.addEventListener('mouseup', () => painting = false);
+canvas.addEventListener('mouseleave', () => painting = false);
+
+function draw(e) {
+  const r = canvas.getBoundingClientRect();
+  const x = (e.clientX - r.left) * (canvas.width / r.width);
+  const y = (e.clientY - r.top) * (canvas.height / r.height);
+  ctx.fillStyle = paintColor;
+  ctx.beginPath();
+  ctx.arc(x, y, brushSize / 2, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function setPaintColor(el) {
+  paintColor = el.dataset.color;
+  document.querySelectorAll('.paint-color').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function clearCanvas() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+document.getElementById('brush-size').addEventListener('input', e => {
+  brushSize = parseInt(e.target.value);
+});
+
+// ===== START MENU =====
+function toggleStart() {
+  const m = document.getElementById('start-menu');
+  m.classList.toggle('open');
+}
+function closeStart() {
+  document.getElementById('start-menu').classList.remove('open');
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('#start-menu') && !e.target.closest('#start-btn'))
+    closeStart();
+  if (!e.target.closest('.icon') && !e.target.closest('.xp-window'))
+    document.querySelectorAll('.icon').forEach(i => i.classList.remove('selected'));
+});
+
+// ===== ICON SELECT =====
+function selectIcon(el) {
+  document.querySelectorAll('.icon').forEach(i => i.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+// ===== CLOCK =====
+function updateClock() {
+  const now = new Date();
+  let h = now.getHours(), m = now.getMinutes();
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  document.getElementById('clock').textContent =
+    h + ':' + String(m).padStart(2, '0') + ' ' + ampm;
+}
+updateClock();
+setInterval(updateClock, 10000);
+
+// Open "About" on load as a welcome
+setTimeout(() => openWindow('about'), 300);
+</script>
+</body>
+</html>
